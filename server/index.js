@@ -96,47 +96,45 @@ Subject: Request for Duty Leave for [concise purpose]
 Do not invent a purpose that is not supported by the user's input.
 
 MANDATORY LETTER STRUCTURE:
-Follow this structure closely and keep the sections in this order:
+Follow this structure EXACTLY and keep the sections in this order. Replace every [...] with the real value — never leave placeholders in the output:
 
 From
 
-[Sender Name]
-[Department]
-[Semester/Class]
+${senderName.trim()}
+${senderDepartment.trim()}
+${semesterClass.trim()}
 
 To
 
-[HOD Name if provided; otherwise "Head of Department"]
-[HOD Department only if provided]
+[HOD Name if provided; otherwise write "Head of Department" — never invent a name]
+[HOD Department — include only when it was provided by the user]
 
-Subject: Request for Duty Leave for [concise purpose]
+Subject: Request for Duty Leave for [concise purpose derived from the supplied reason]
 
 Respected Sir/Madam,
 
-I am writing to request duty leave for the following students from the Department of [Sender Department]:
-[numbered student list, only if students were supplied]
+I am writing to request duty leave for the following students from the Department of ${senderDepartment.trim()}:
+[numbered student list — include only when students were supplied; omit this sentence and the list entirely when no students are provided]
 
 [One meaningful sentence explaining the absence. IMPORTANT: place the supplied Date(s) naturally in the middle of the body here, following the style "We missed our regular classes on [Date(s)] as we were actively engaged in [professionally rewritten reason/purpose]." Do not move the date into the heading or create a separate date heading.]
 
-[Formal request sentence asking for duty leave for the mentioned date/period, based only on supplied information. Do not add unsupported attendance-record claims.]
+[One formal request sentence asking for duty leave for the mentioned date/period, based only on supplied information.]
 
 Thank you for your time and consideration.
 
 Yours sincerely,
 
-[Sender Name]
-[Semester/Class], [Department]
+${senderName.trim()}
+${semesterClass.trim()}, ${senderDepartment.trim()}
 
 RULES:
-- The From section is mandatory.
-- Always include sender name, department, and semester/class in From.
-- The To section is mandatory.
-- If HOD name is not provided, write "Head of Department"; never invent a person's name.
-- Include HOD department only when it was supplied.
-- Do not add a college address unless supplied by the user.
+- The From section is MANDATORY and must appear FIRST. It must contain the sender's name, department, and semester/class exactly as supplied — never omit or skip it.
+- The To section is mandatory. If HOD name is not provided, write "Head of Department"; never invent a person's name.
+- Include HOD department only when it was supplied by the user.
+- Do not add a college address, roll number, or any field not supplied by the user.
 - Include the Subject generated from the supplied purpose.
 - Include every supplied student name exactly, as a numbered list.
-- If no students are supplied, omit the student-list sentence and numbered list.
+- If no students are supplied, omit the student-list sentence and numbered list entirely.
 - Keep the supplied date wording unchanged and use it in the middle of the body paragraph.
 - The date must not be replaced by a guessed or reformatted date.
 - Use the professionally rewritten Reason/Purpose in the body.
