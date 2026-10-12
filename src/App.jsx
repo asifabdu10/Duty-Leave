@@ -114,16 +114,32 @@ function App() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/generate", {
+      const apiBase = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+      const response = await fetch(`${apiBase}/api/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form)
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get("content-type") || "";
+      let data = null;
+
+      if (contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        if (!response.ok) {
+          throw new Error(
+            `Backend server error (${response.status}): The API endpoint was not found. If this site is hosted, make sure the backend server is deployed and VITE_API_URL is configured. If running locally, start both with 'npm run dev'.`
+          );
+        }
+        throw new Error(
+          `Unexpected response format from server (${contentType || "non-JSON"}). Please check backend configuration.`
+        );
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || "Generation failed.");
+        throw new Error(data?.error || `Generation failed with status ${response.status}.`);
       }
 
       setGenerated(data.text);

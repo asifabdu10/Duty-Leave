@@ -1,7 +1,14 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
+import fs from "fs";
 import { GoogleGenAI } from "@google/genai";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const distPath = path.resolve(__dirname, "../dist");
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -170,6 +177,21 @@ RULES:
   }
 });
 
-app.listen(port, () => {
-  console.log(`Duty Leave AI server running at http://localhost:${port}`);
-});
+// Serve built frontend if dist exists (for full-stack deployment on Render/Railway/Heroku)
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api/")) return next();
+    res.sendFile(path.join(distPath, "index.html"), (err) => {
+      if (err) next();
+    });
+  });
+}
+
+export default app;
+
+if (process.env.NODE_ENV !== "test" && !process.env.VERCEL) {
+  app.listen(port, () => {
+    console.log(`Duty Leave AI server running at http://localhost:${port}`);
+  });
+}
