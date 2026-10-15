@@ -160,7 +160,13 @@ RULES:
    - Output ONLY the final plain-text application.
 `;
 
-    const candidateModels = [
+    const groqModels = [
+      "openai/gpt-oss-120b",
+      "openai/gpt-oss-20b",
+      "qwen/qwen3.8-27b"
+    ];
+
+    const geminiModels = [
       "gemini-3.5-flash-lite",
       "gemini-3.1-flash-lite",
       "gemini-3.5-flash"
@@ -169,8 +175,52 @@ RULES:
     let text = "";
     let lastError = null;
 
-    if (ai) {
-      for (const model of candidateModels) {
+    // 1. Prioritize Groq if GROQ_API_KEY is present (14,400 free requests per day, high concurrency)
+    if (process.env.GROQ_API_KEY) {
+      for (const model of groqModels) {
+        try {
+          const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              model,
+              messages: [
+                {
+                  role: "system",
+                  content: "You are an official college letter formatter. Return ONLY the final plain-text formal application. Do not include thinking, reasoning, commentary, or markdown formatting."
+                },
+                { role: "user", content: prompt }
+              ],
+              temperature: 0.2,
+              max_tokens: 1200
+            })
+          });
+
+          const groqData = await groqRes.json();
+          if (groqData.error) {
+            console.warn(`Groq model ${model} error:`, groqData.error.message);
+            continue;
+          }
+
+          const candidate = groqData.choices?.[0]?.message?.content?.trim();
+          if (candidate) {
+            text = candidate;
+            break;
+          }
+        } catch (groqErr) {
+          lastError = groqErr;
+          console.warn(`Groq request failed for ${model}:`, groqErr.message);
+          continue;
+        }
+      }
+    }
+
+    // 2. If Groq was not available or didn't respond, try Google Gemini
+    if (!text && ai) {
+      for (const model of geminiModels) {
         try {
           const response = await ai.models.generateContent({
             model,
@@ -193,32 +243,9 @@ RULES:
       }
     }
 
-    // Optional Groq failover / alternative (14,400 free requests per day)
-    if (!text && process.env.GROQ_API_KEY) {
-      try {
-        const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
-            messages: [{ role: "user", content: prompt }],
-            temperature: 0.25,
-            max_tokens: 1200
-          })
-        });
-        const groqData = await groqRes.json();
-        text = groqData.choices?.[0]?.message?.content?.trim();
-      } catch (groqErr) {
-        console.error("Groq fallback error:", groqErr);
-      }
-    }
-
     if (!text) {
       return res.status(502).json({
-        error: lastError?.message || "AI returned an empty response or quota was exceeded. Please try again in a few moments."
+        error: lastError?.message || "AI returned an empty response or daily quota was exceeded. Please try again shortly or configure GROQ_API_KEY."
       });
     }
 
