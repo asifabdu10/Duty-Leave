@@ -115,10 +115,15 @@ function App() {
 
     try {
       const apiBase = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+      const applicationDate = new Date().toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      });
       const response = await fetch(`${apiBase}/api/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
+        body: JSON.stringify({ ...form, applicationDate })
       });
 
       const contentType = response.headers.get("content-type") || "";
@@ -172,7 +177,7 @@ function App() {
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       const contentWidth = pageWidth - margin * 2;
-      const lineHeight = 7;
+      const lineHeight = 6.5;
       const lines = generated.split(/\r?\n/);
 
       pdf.setProperties({
@@ -187,9 +192,12 @@ function App() {
       let y = margin;
 
       for (const paragraph of lines) {
-        const wrapped = paragraph.trim()
-          ? pdf.splitTextToSize(paragraph, contentWidth)
-          : [""];
+        if (!paragraph.trim()) {
+          y += 5;
+          continue;
+        }
+
+        const wrapped = pdf.splitTextToSize(paragraph, contentWidth);
 
         for (const line of wrapped) {
           if (y + lineHeight > pageHeight - margin) {
@@ -199,10 +207,6 @@ function App() {
 
           pdf.text(line, margin, y);
           y += lineHeight;
-        }
-
-        if (paragraph.trim() === "") {
-          y += 2;
         }
       }
 

@@ -43,7 +43,8 @@ app.post("/api/generate", async (req, res) => {
       hodDepartment,
       dates,
       purpose,
-      students
+      students,
+      applicationDate
     } = req.body || {};
 
     if (
@@ -62,70 +63,69 @@ app.post("/api/generate", async (req, res) => {
       ? students.map((s) => String(s).trim()).filter(Boolean)
       : [];
 
-    const prompt = `
-Generate a formal Duty Leave Application for Carmel College of Engineering and Technology.
+    const today = new Date();
+    const defaultTodayFormatted = today.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    });
+    const finalApplicationDate = applicationDate?.trim() || defaultTodayFormatted;
+    const recipientDepartment = hodDepartment?.trim() || senderDepartment.trim();
 
-Use ONLY the information supplied below. Do not invent or assume any personal information, event details, dates, locations, organizers, achievements, roles, responsibilities, attendance facts, or HOD details.
+    const prompt = `Generate an official, formal Duty Leave Application for Carmel College of Engineering and Technology.
 
-SENDER
+Use ONLY the information supplied below. Do not invent any extra facts, locations, event organizers, achievements, or details.
+
+SENDER:
 Name: ${senderName.trim()}
 Department: ${senderDepartment.trim()}
 Semester/Class: ${semesterClass.trim()}
 
-RECIPIENT / HOD (OPTIONAL)
-HOD Name: ${hodName?.trim() || "Not provided"}
-HOD Department: ${hodDepartment?.trim() || "Not provided"}
+APPLICATION GENERATION DATE (TODAY): ${finalApplicationDate}
 
-LEAVE DATE(S)
-${dates.trim()}
+RECIPIENT / HOD:
+${hodName?.trim() ? `HOD Name: ${hodName.trim()}` : "Designation: Head of Department"}
+Department: Department of ${recipientDepartment}, Carmel College of Engineering and Technology
 
-REASON / PURPOSE
-Raw user input:
-${purpose.trim()}
-
-STUDENTS
-${studentNames.length
-  ? studentNames.map((name, i) => `${i + 1}. ${name}`).join("\n")
-  : "No student list was provided."}
+LEAVE DATE(S): ${dates.trim()}
+REASON / PURPOSE (USER INPUT): ${purpose.trim()}
+STUDENTS:
+${
+  studentNames.length
+    ? studentNames.map((name, i) => `${i + 1}. ${name}`).join("\n")
+    : "Only the applicant (single student)."
+}
 
 REASON/PURPOSE TRANSFORMATION:
-The Reason/Purpose may be a short phrase, keywords, incomplete sentence, or informal description.
-Turn it into one or more clear, meaningful, grammatically correct, professional sentences suitable for an official college duty-leave application.
-Preserve the user's original meaning.
-You may improve grammar, wording, and sentence structure.
-Do NOT add unsupported facts such as event dates, locations, organizers, achievements, duties, roles, or technical details.
-Do not change or reinterpret the supplied date wording.
+Turn the user's Reason/Purpose into clear, meaningful, grammatically correct, professional wording suitable for an official college duty-leave application. Preserve original intent without adding unsupported facts.
 
 SUBJECT:
-Create a concise subject from the supplied Reason/Purpose.
-Use this pattern:
-Subject: Request for Duty Leave for [concise purpose]
-Do not invent a purpose that is not supported by the user's input.
+Create a concise subject line:
+Subject: Request for Duty Leave for [concise purpose derived from the supplied reason]
 
-MANDATORY LETTER STRUCTURE:
-Follow this structure EXACTLY and keep the sections in this order. Replace every [...] with the real value — never leave placeholders in the output:
+MANDATORY LETTER STRUCTURE AND EXACT SPACING:
+Follow this exact structure and spacing. Sections separated by a blank line MUST have exactly one blank line between them:
 
 From
-
 ${senderName.trim()}
 ${senderDepartment.trim()}
 ${semesterClass.trim()}
 
-To
+${finalApplicationDate}
 
-[HOD Name if provided; otherwise write "Head of Department" — never invent a name]
-[HOD Department — include only when it was provided by the user]
+To
+${hodName?.trim() ? `${hodName.trim()}\nHead of Department` : "Head of Department"}
+Department of ${recipientDepartment}, Carmel College of Engineering and Technology
 
 Subject: Request for Duty Leave for [concise purpose derived from the supplied reason]
 
 Respected Sir/Madam,
 
-I am writing to request duty leave for the following students from the Department of ${senderDepartment.trim()}:
-[numbered student list — include only when students were supplied; omit this sentence and the list entirely when no students are provided]
-
-[One meaningful sentence explaining the absence. IMPORTANT: place the supplied Date(s) naturally in the middle of the body here, following the style "We missed our regular classes on [Date(s)] as we were actively engaged in [professionally rewritten reason/purpose]." Do not move the date into the heading or create a separate date heading.]
-
-[One formal request sentence asking for duty leave for the mentioned date/period, based only on supplied information.]
+${
+  studentNames.length > 1
+    ? `I am writing to request duty leave for the following students from the Department of ${senderDepartment.trim()}:\n${studentNames.map((n, i) => `${i + 1}. ${n}`).join("\n")}\n\nWe missed our regular classes on ${dates.trim()} as we were actively engaged in [professionally rewritten reason/purpose].\n\nWe kindly request you to grant us duty leave for the mentioned date(s).`
+    : `I missed my regular classes on ${dates.trim()} as I was actively engaged in [professionally rewritten reason/purpose].\n\nI kindly request you to grant me duty leave for the mentioned date.`
+}
 
 Thank you for your time and consideration.
 
@@ -135,26 +135,28 @@ ${senderName.trim()}
 ${semesterClass.trim()}, ${senderDepartment.trim()}
 
 RULES:
-- The From section is MANDATORY and must appear FIRST. It must contain the sender's name, department, and semester/class exactly as supplied — never omit or skip it.
-- The To section is mandatory. If HOD name is not provided, write "Head of Department"; never invent a person's name.
-- Include HOD department only when it was supplied by the user.
-- Do not add a college address, roll number, or any field not supplied by the user.
-- Include the Subject generated from the supplied purpose.
-- Include every supplied student name exactly, as a numbered list.
-- If no students are supplied, omit the student-list sentence and numbered list entirely.
-- Keep the supplied date wording unchanged and use it in the middle of the body paragraph.
-- The date must not be replaced by a guessed or reformatted date.
-- Use the professionally rewritten Reason/Purpose in the body.
-- Keep the application concise, formal, and ready to submit.
-- Do not use Markdown, bullet symbols, code fences, explanations, notes, or placeholders in the final output.
-- Return only the final plain-text application.
+1. SPACING:
+   - "From" block: "From", Name, Department, and Semester/Class must be on consecutive lines without empty lines in between.
+   - Leave EXACTLY ONE empty line after the From block, then output the Application Date (${finalApplicationDate}).
+   - Leave EXACTLY ONE empty line after the Application Date, then output the "To" block.
+   - "To" block: "To", HOD designation, and "Department of ..., Carmel College of Engineering and Technology" must be on consecutive lines without empty lines in between.
+   - Leave EXACTLY ONE empty line before and after "Subject: ...".
+   - Leave EXACTLY ONE empty line after "Respected Sir/Madam,".
+   - Leave EXACTLY ONE empty line between the explanation paragraph and the request paragraph.
+   - Leave EXACTLY ONE empty line before "Thank you for your time and consideration."
+   - Leave EXACTLY ONE empty line before "Yours sincerely,".
+   - Leave EXACTLY ONE empty line after "Yours sincerely," followed consecutively by the sender's Name and "Semester/Class, Department".
+2. CONTENT:
+   - Place the supplied date(s) (${dates.trim()}) naturally in the body sentence ("I missed my regular classes on ...").
+   - Do NOT use markdown, bold symbols (**), hashtags (##), asterisks, or placeholders.
+   - Output ONLY the final plain-text application.
 `;
 
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
       contents: prompt,
       config: {
-        temperature: 0.35,
+        temperature: 0.25,
         maxOutputTokens: 1200
       }
     });
