@@ -23,15 +23,15 @@ const ai = process.env.GEMINI_API_KEY
 app.get("/api/health", (_req, res) => {
   res.json({
     ok: true,
-    aiConfigured: Boolean(process.env.GEMINI_API_KEY)
+    aiConfigured: Boolean(process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY)
   });
 });
 
 app.post("/api/generate", async (req, res) => {
   try {
-    if (!ai) {
+    if (!ai && !process.env.GROQ_API_KEY) {
       return res.status(500).json({
-        error: "Gemini API key is not configured. Add GEMINI_API_KEY to your .env file."
+        error: "AI API key is not configured. Add GEMINI_API_KEY or GROQ_API_KEY to your environment variables."
       });
     }
 
@@ -160,26 +160,71 @@ RULES:
    - Output ONLY the final plain-text application.
 `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: prompt,
-      config: {
-        temperature: 0.25,
-        maxOutputTokens: 1200
-      }
-    });
+    const candidateModels = [
+      "gemini-3.5-flash-lite",
+      "gemini-3.1-flash-lite",
+      "gemini-3.5-flash"
+    ];
 
-    const text = response.text?.trim();
+    let text = "";
+    let lastError = null;
+
+    if (ai) {
+      for (const model of candidateModels) {
+        try {
+          const response = await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+              temperature: 0.25,
+              maxOutputTokens: 1200
+            }
+          });
+          const candidateText = response.text?.trim();
+          if (candidateText) {
+            text = candidateText;
+            break;
+          }
+        } catch (err) {
+          lastError = err;
+          console.warn(`Model ${model} failed, trying next available model:`, err.message);
+          continue;
+        }
+      }
+    }
+
+    // Optional Groq failover / alternative (14,400 free requests per day)
+    if (!text && process.env.GROQ_API_KEY) {
+      try {
+        const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.25,
+            max_tokens: 1200
+          })
+        });
+        const groqData = await groqRes.json();
+        text = groqData.choices?.[0]?.message?.content?.trim();
+      } catch (groqErr) {
+        console.error("Groq fallback error:", groqErr);
+      }
+    }
 
     if (!text) {
       return res.status(502).json({
-        error: "Gemini returned an empty response. Please try again."
+        error: lastError?.message || "AI returned an empty response or quota was exceeded. Please try again in a few moments."
       });
     }
 
     res.json({ text });
   } catch (error) {
-    console.error("Gemini generation error:", error);
+    console.error("AI generation error:", error);
     res.status(500).json({
       error: error?.message || "Unable to generate the application."
     });
