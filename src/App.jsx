@@ -130,11 +130,11 @@ function App() {
         const text = await response.text();
         if (!response.ok) {
           throw new Error(
-            `Backend server error (${response.status}): The API endpoint was not found. If this site is hosted, make sure the backend server is deployed and VITE_API_URL is configured. If running locally, start both with 'npm run dev'.`
+            `Server error (${response.status}). If deployed on Vercel, check the function logs and make sure GEMINI_API_KEY is set in Vercel project environment variables.`
           );
         }
         throw new Error(
-          `Unexpected response format from server (${contentType || "non-JSON"}). Please check backend configuration.`
+          `Unexpected response format (${contentType || "non-JSON"}). Please check backend configuration.`
         );
       }
 

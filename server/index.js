@@ -150,17 +150,16 @@ RULES:
 - Return only the final plain-text application.
 `;
 
-    const interaction = await ai.interactions.create({
-      model: "gemini-3.8-flash",
-      input: prompt,
-      generation_config: {
-        thinking_level: "low",
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
         temperature: 0.35,
-        max_output_tokens: 1200
+        maxOutputTokens: 1200
       }
     });
 
-    const text = interaction.output_text?.trim();
+    const text = response.text?.trim();
 
     if (!text) {
       return res.status(502).json({
@@ -180,7 +179,7 @@ RULES:
 // Serve built frontend if dist exists (for full-stack deployment on Render/Railway/Heroku)
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
-  app.get("*", (req, res, next) => {
+  app.use((req, res, next) => {
     if (req.path.startsWith("/api/")) return next();
     res.sendFile(path.join(distPath, "index.html"), (err) => {
       if (err) next();
