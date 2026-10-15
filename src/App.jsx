@@ -27,10 +27,10 @@ const HOD_DEPARTMENTS = [
 ];
 
 const DEPARTMENTS = [
-  "Computer Science & Engineering",
-  "Electrical and Electronics Engineering",
-  "Civil Engineering",
-  "Mechanical Engineering",
+  "Department of Computer Science & Engineering",
+  "Department of Electrical and Electronics Engineering",
+  "Department of Civil Engineering",
+  "Department of Mechanical Engineering",
   "Other"
 ];
 
