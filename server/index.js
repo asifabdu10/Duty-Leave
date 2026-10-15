@@ -70,7 +70,14 @@ app.post("/api/generate", async (req, res) => {
       year: "numeric"
     });
     const finalApplicationDate = applicationDate?.trim() || defaultTodayFormatted;
-    const recipientDepartment = hodDepartment?.trim() || senderDepartment.trim();
+
+    // Clean any accidental repetition of "Department of" or college name from the input:
+    const rawRecipientDepartment = hodDepartment?.trim() || senderDepartment.trim();
+    let cleanDept = rawRecipientDepartment.replace(/,\s*Carmel College of Engineering and Technology.*/gi, "").trim();
+    while (/^Department of\s+/i.test(cleanDept)) {
+      cleanDept = cleanDept.replace(/^Department of\s+/i, "").trim();
+    }
+    const recipientDepartmentLine = `Department of ${cleanDept}, Carmel College of Engineering and Technology`;
 
     const prompt = `Generate an official, formal Duty Leave Application for Carmel College of Engineering and Technology.
 
@@ -85,7 +92,7 @@ APPLICATION GENERATION DATE (TODAY): ${finalApplicationDate}
 
 RECIPIENT / HOD:
 ${hodName?.trim() ? `HOD Name: ${hodName.trim()}` : "Designation: Head of Department"}
-Department: Department of ${recipientDepartment}, Carmel College of Engineering and Technology
+Department: ${recipientDepartmentLine}
 
 LEAVE DATE(S): ${dates.trim()}
 REASON / PURPOSE (USER INPUT): ${purpose.trim()}
@@ -115,7 +122,7 @@ ${finalApplicationDate}
 
 To
 ${hodName?.trim() ? `${hodName.trim()}\nHead of Department` : "Head of Department"}
-Department of ${recipientDepartment}, Carmel College of Engineering and Technology
+${recipientDepartmentLine}
 
 Subject: Request for Duty Leave for [concise purpose derived from the supplied reason]
 
@@ -139,7 +146,7 @@ RULES:
    - "From" block: "From", Name, Department, and Semester/Class must be on consecutive lines without empty lines in between.
    - Leave EXACTLY ONE empty line after the From block, then output the Application Date (${finalApplicationDate}).
    - Leave EXACTLY ONE empty line after the Application Date, then output the "To" block.
-   - "To" block: "To", HOD designation, and "Department of ..., Carmel College of Engineering and Technology" must be on consecutive lines without empty lines in between.
+   - "To" block: "To", HOD designation, and "${recipientDepartmentLine}" must be on consecutive lines without empty lines in between.
    - Leave EXACTLY ONE empty line before and after "Subject: ...".
    - Leave EXACTLY ONE empty line after "Respected Sir/Madam,".
    - Leave EXACTLY ONE empty line between the explanation paragraph and the request paragraph.
@@ -147,6 +154,7 @@ RULES:
    - Leave EXACTLY ONE empty line before "Yours sincerely,".
    - Leave EXACTLY ONE empty line after "Yours sincerely," followed consecutively by the sender's Name and "Semester/Class, Department".
 2. CONTENT:
+   - In the "To" block, the recipient line must be EXACTLY: "${recipientDepartmentLine}". Do NOT repeat or duplicate "Department of" or "Carmel College of Engineering and Technology".
    - Place the supplied date(s) (${dates.trim()}) naturally in the body sentence ("I missed my regular classes on ...").
    - Do NOT use markdown, bold symbols (**), hashtags (##), asterisks, or placeholders.
    - Output ONLY the final plain-text application.

@@ -20,10 +20,10 @@ import {
 import { jsPDF } from "jspdf";
 
 const HOD_DEPARTMENTS = [
-  "Department of Computer Science & Engineering, Carmel College of Engineering and Technology",
-  "Department of Electrical and Electronics Engineering, Carmel College of Engineering and Technology",
-  "Department of Civil Engineering, Carmel College of Engineering and Technology",
-  "Department of Mechanical Engineering, Carmel College of Engineering and Technology"
+  "Computer Science & Engineering",
+  "Electrical and Electronics Engineering",
+  "Civil Engineering",
+  "Mechanical Engineering"
 ];
 
 const DEPARTMENTS = [
